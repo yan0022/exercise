@@ -1,0 +1,92 @@
+---
+title: "regression test"
+author: "Yan_0022"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r}
+library(randomForest)
+library(neuralnet)
+library(kernlab)
+library(car)
+library(psych)
+library(rsample)
+```
+
+```{r}
+set.seed(22)
+atti.sp1  <- rsample::initial_split(attitude, prop=0.75) 
+train <- rsample::training(atti.sp1) 
+test  <- rsample::testing(atti.sp1)
+train
+```
+
+
+```{r}
+fom <- rating ~ complaints + privileges + learning + raises + critical + advance 
+```
+
+```{r}
+train <- scale(train)
+test <- scale(test)
+train <- as.data.frame(train)
+test <- as.data.frame(test)
+test
+```
+
+```{r}
+rf <- randomForest(formula = fom, data = train, importance=TRUE, ntree = 500)
+rf
+```
+
+```{r}
+varImpPlot(rf)
+```
+
+```{r}
+mr <- lm(formula = fom, data = train)
+vif(mr)
+```
+```{r}
+summary(mr)
+```
+
+
+```{r}
+nn <- neuralnet(formula = fom, data = train, hidden = c(3,3))
+plot(nn)
+```
+
+```{r}
+nn$result.matrix
+```
+
+
+```{r}
+svm <- ksvm(fom,data = train)
+svm
+```
+
+```{r}
+rf_test <- as.data.frame(predict(rf, newdata = test))
+mr_test <- as.data.frame(predict(mr, newdata = test))
+nn_test <- as.data.frame(predict(nn, newdata = test))
+svm_test <- as.data.frame(predict(svm, newdata = test))
+
+result <- data.frame(test$rating,rf_test,mr_test,nn_test,svm_test)
+colnames(result)<- c("result","rf","mr","nn","svm")
+result
+```
+
+```{r}
+loss <- data.frame(matrix(0, nrow = 1,ncol = 4))
+loss[1,1] <- sum((result[,2] - result[,1])**2)
+loss[1,2] <- sum((result[,3] - result[,1])**2)
+loss[1,3] <- sum((result[,4] - result[,1])**2)
+loss[1,4] <- sum((result[,5] - result[,1])**2)
+colnames(loss) <- c("rf","mr","nn","svm")
+loss
+```
+
+
